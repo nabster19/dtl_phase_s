@@ -428,7 +428,7 @@ class HealthcareMLModel:
             })
 
             results.append({
-                "disease": disease,
+                "disease": str(disease),
                 "confidence": round(conf, 2),
                 "category": metadata["category"],
                 "severity": metadata["severity"],
