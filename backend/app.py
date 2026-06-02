@@ -897,22 +897,103 @@ def trigger_emergency_alert(current_user):
         return jsonify({'message': 'Emergency alerts logged, but SMS dispatch failed.'}), 500
 
 # ----------------- MEDICINE REMINDERS -----------------
+@app.route('/api/reminders', methods=['GET', 'POST', 'OPTIONS'])
+@token_required
+def reminders(current_user):
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'}), 200
+
+    user_id = current_user['id']
+
+    if request.method == 'GET':
+        try:
+            rows = db.fetch_all(
+                "SELECT * FROM medicine_reminders WHERE user_id = %s ORDER BY reminder_time ASC",
+                (user_id,)
+            )
+            return jsonify({'reminders': rows}), 200
+        except Exception as e:
+            print(f'[Reminders GET] ERROR: {e}')
+            return jsonify({'reminders': []}), 200
+
+    if request.method == 'POST':
+        data = request.get_json(force=True, silent=True) or {}
+        medicine = (data.get('medicine_name') or '').strip()
+        time_str  = (data.get('reminder_time') or '').strip()
+        dosage    = (data.get('dosage') or '').strip()
+        frequency = data.get('frequency', 'daily')
+        notes     = data.get('notes', '')
+
+        if not medicine or not time_str:
+            return jsonify({'message': 'Medicine name and reminder time are required.'}), 400
+
+        try:
+            rid = db.execute_query(
+                "INSERT INTO medicine_reminders (user_id, medicine_name, dosage, reminder_time, frequency, notes) VALUES (%s, %s, %s, %s, %s, %s)",
+                (user_id, medicine, dosage, time_str, frequency, notes)
+            )
+            return jsonify({'message': f'Reminder set for {medicine} at {time_str}', 'id': rid}), 201
+        except Exception as e:
+            print(f'[Reminders POST] ERROR: {e}')
+            return jsonify({'message': f'Failed to create reminder: {str(e)}'}), 500
+
+
+@app.route('/api/reminders/<int:reminder_id>', methods=['PUT', 'DELETE', 'OPTIONS'])
+@token_required
+def reminder_detail(current_user, reminder_id):
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'}), 200
+
+    user_id = current_user['id']
+
+    if request.method == 'PUT':
+        data = request.get_json(force=True, silent=True) or {}
+        medicine  = (data.get('medicine_name') or '').strip()
+        time_str  = (data.get('reminder_time') or '').strip()
+        dosage    = data.get('dosage', '')
+        frequency = data.get('frequency', 'daily')
+        notes     = data.get('notes', '')
+        is_active = 1 if data.get('is_active', True) else 0
+
+        try:
+            db.execute_query(
+                "UPDATE medicine_reminders SET medicine_name=%s, dosage=%s, reminder_time=%s, frequency=%s, notes=%s, is_active=%s WHERE id=%s AND user_id=%s",
+                (medicine, dosage, time_str, frequency, notes, is_active, reminder_id, user_id)
+            )
+            return jsonify({'message': 'Reminder updated successfully'}), 200
+        except Exception as e:
+            return jsonify({'message': f'Update failed: {str(e)}'}), 500
+
+    if request.method == 'DELETE':
+        try:
+            db.execute_query(
+                "DELETE FROM medicine_reminders WHERE id = %s AND user_id = %s",
+                (reminder_id, user_id)
+            )
+            return jsonify({'message': 'Reminder deleted successfully'}), 200
+        except Exception as e:
+            return jsonify({'message': f'Delete failed: {str(e)}'}), 500
+
+
+# Legacy POST route kept for backward compatibility
 @app.route('/api/medicine-reminder', methods=['POST'])
 @token_required
 def set_medicine_reminder(current_user):
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     medicine = data.get('medicine_name')
-    time_str = data.get('reminder_time') # e.g. "08:00 AM"
-
+    time_str = data.get('reminder_time')
     if not medicine or not time_str:
         return jsonify({'message': 'Missing medicine name or reminder time'}), 400
+    user_id = current_user['id']
+    try:
+        rid = db.execute_query(
+            "INSERT INTO medicine_reminders (user_id, medicine_name, reminder_time) VALUES (%s, %s, %s)",
+            (user_id, medicine, time_str)
+        )
+        return jsonify({'message': f'Reminder set for {medicine} at {time_str}!', 'id': rid}), 200
+    except Exception as e:
+        return jsonify({'message': f'Failed: {str(e)}'}), 500
 
-    reminder_msg = f"CuraAI Reminder: Time to take your medication - {medicine} ({time_str}). Please confirm after consumption."
-    
-    # Save as notification and send immediately (simulate daily cron)
-    notification_service.send_sms_notification(reminder_msg, f"Medicine Reminder ({medicine})", current_user['id'])
-    
-    return jsonify({'message': f'Reminder successfully set for {medicine} at {time_str}!'}), 200
 
 # ----------------- ADMIN DASHBOARD ENDPOINTS -----------------
 @app.route('/api/admin/dashboard', methods=['GET'])
@@ -999,7 +1080,7 @@ def chat_message(current_user):
         })
 
         return jsonify({
-            'reply': result['message'],
+            'response': result['message'],
             'type':  result.get('type', 'general'),
             'data':  result.get('data', {})
         }), 200
@@ -1008,7 +1089,7 @@ def chat_message(current_user):
         print(f'[Chat] ERROR: {e}')
         import traceback; traceback.print_exc()
         return jsonify({
-            'reply': f"I'm sorry, I encountered an issue processing your request. Please try again.\n\n⚕ _If the problem persists, please consult a doctor directly._",
+            'response': f"I'm sorry, I encountered an issue processing your request. Please try again.\n\n⚕ _If the problem persists, please consult a doctor directly._",
             'type':  'error',
             'data':  {}
         }), 200   # Return 200 so frontend doesn't show fetch error

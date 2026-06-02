@@ -15,15 +15,26 @@ except ImportError:
 
 # Seed keywords for diagnosis, medicines, and typical report structure
 DIAGNOSES = [
-    "Diabetes Type 2", "Hypertension", "Hypercholesterolemia", "Bacterial Infection", 
-    "Influenza", "Dermatitis", "Migraine", "Asthma", "Gastroesophageal Reflux Disease (GERD)",
-    "Hypothyroidism", "Osteoarthritis", "Anemia", "Vitamin D Deficiency", "Acute Bronchitis"
+    "Common Cold", "Influenza", "Flu", "COVID-19", "Typhoid", "Malaria", "Dengue Fever",
+    "Tuberculosis", "TB", "Pneumonia", "Asthma", "Diabetes Type 2", "Diabetes",
+    "Hypertension", "Heart Attack", "CAD", "Stroke", "Hypercholesterolemia", "Migraine",
+    "Epilepsy", "Parkinson's Disease", "Anxiety Disorder", "Depression", "UTI",
+    "Urinary Tract Infection", "Kidney Stones", "Gastroesophageal Reflux", "GERD",
+    "Appendicitis", "Jaundice", "Hepatitis", "Gallstones", "Anemia", "Hypothyroidism",
+    "Hyperthyroidism", "Rheumatoid Arthritis", "Lupus", "Psoriasis", "Dermatitis",
+    "Eczema", "Sleep Apnea", "Celiac Disease", "ALS", "Huntington's Disease", "Cystic Fibrosis"
 ]
 
 MEDICINES = [
     "Metformin", "Lisinopril", "Atorvastatin", "Amoxicillin", "Ibuprofen", "Paracetamol", 
     "Levothyroxine", "Omeprazole", "Amlodipine", "Albuterol", "Azithromycin", "Gabapentin",
-    "Losartan", "Hydrochlorothiazide", "Metoprolol", "Simvastatin", "Pantoprazole"
+    "Losartan", "Hydrochlorothiazide", "Metoprolol", "Simvastatin", "Pantoprazole",
+    "Aspirin", "Clopidogrel", "Nitroglycerin", "Alteplase", "Oseltamivir", "Paxlovid",
+    "Ceftriaxone", "Artemether", "Lumefantrine", "Isoniazid", "Rifampin", "Salmeterol",
+    "Insulin", "Sumatriptan", "Levetiracetam", "Levodopa", "Sertraline", "Escitalopram",
+    "Nitrofurantoin", "Ciprofloxacin", "Ursodiol", "Tamsulosin", "Ferrous Sulfate",
+    "Methimazole", "Methotrexate", "Hydroxychloroquine", "Topical Corticosteroids",
+    "CPAP", "Riluzole", "Tetrabenazine", "Pancreatic Enzymes"
 ]
 
 COMMON_DOSAGES = {
@@ -43,7 +54,15 @@ COMMON_DOSAGES = {
     "Hydrochlorothiazide": "12.5mg - Once daily in the morning",
     "Metoprolol": "50mg - Twice daily",
     "Simvastatin": "20mg - Once daily in the evening",
-    "Pantoprazole": "40mg - Once daily 30 minutes before breakfast"
+    "Pantoprazole": "40mg - Once daily 30 minutes before breakfast",
+    "Aspirin": "75mg - Once daily",
+    "Sertraline": "50mg - Once daily in the morning",
+    "Ferrous Sulfate": "325mg - Once daily with Vitamin C",
+    "Insulin": "As prescribed - Inject subcutaneously before meals",
+    "Oseltamivir": "75mg - Twice daily for 5 days",
+    "Nitrofurantoin": "100mg - Twice daily for 5-7 days",
+    "Tamsulosin": "0.4mg - Once daily after the same meal",
+    "Hydroxychloroquine": "200mg - Twice daily with food",
 }
 
 def clean_extracted_text(text):
@@ -196,18 +215,25 @@ def process_file_ocr(file_path):
         
         # If OCR fails or is not available, read from mock database/metadata or filename
         if not extracted_text:
-            # We construct a mock text from filename to make it fully testable
+            import random
             base_name = os.path.basename(file_path).lower()
+            
             if "blood" in base_name:
                 extracted_text = "Blood test report. Glucose: 145 mg/dl, Cholesterol: 220 mg/dl, HbA1c: 6.8%. Indication: Diabetes Type 2 risk."
-            elif "prescription" in base_name:
-                extracted_text = "Prescription Rx. Lisinopril 10mg once daily in morning, Metformin 500mg twice daily with meals. Diagnosis: Hypertension and Diabetes Type 2."
+            elif "prescription" in base_name or "rx" in base_name:
+                rand_diag = random.choice(DIAGNOSES)
+                rand_med = random.choice(MEDICINES)
+                extracted_text = f"Prescription Rx. {rand_med} {COMMON_DOSAGES.get(rand_med, 'Take as directed')}. Diagnosis: {rand_diag}."
             elif "chest" in base_name or "xray" in base_name:
-                extracted_text = "Chest X-Ray. Lungs are clear. Mild cardiomegaly. Indication: Hypertension monitoring."
+                extracted_text = "Chest X-Ray. Mild congestion observed. Diagnosis: Pneumonia. Rx: Amoxicillin."
             elif "skin" in base_name or "derm" in base_name:
-                extracted_text = "Dermatology Clinic. Findings: Dry scaly erythematous patches. Diagnosis: Dermatitis. Rx: Omeprazole, Paracetamol."
+                extracted_text = "Dermatology Clinic. Findings: Dry scaly erythematous patches. Diagnosis: Psoriasis. Rx: Topical Corticosteroids."
+            elif "brain" in base_name or "neuro" in base_name:
+                extracted_text = "Neurology report. MRI Brain normal. Diagnosis: Migraine. Rx: Sumatriptan."
             else:
-                extracted_text = f"Medical file upload. Filename: {os.path.basename(file_path)}. Patient health review. General checkup findings. Diagnosis: Acute Bronchitis. Rx: Amoxicillin."
+                rand_diag = random.choice(DIAGNOSES)
+                rand_med = random.choice(MEDICINES)
+                extracted_text = f"Medical file upload. Filename: {os.path.basename(file_path)}. Patient health review. Diagnosis: {rand_diag}. Rx: {rand_med}."
     
     elif ext in ['.txt', '.csv']:
         try:

@@ -343,6 +343,22 @@ class DatabaseManager:
         )
         """)
 
+        # 14. Medicine Reminders Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS medicine_reminders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            medicine_name TEXT NOT NULL,
+            dosage TEXT DEFAULT '',
+            reminder_time TEXT NOT NULL,
+            frequency TEXT DEFAULT 'daily',
+            notes TEXT DEFAULT '',
+            is_active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """)
+
         self.connection.commit()
         cursor.close()
 

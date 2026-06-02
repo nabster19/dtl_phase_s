@@ -6,7 +6,18 @@ import json
 import requests
 from datetime import datetime
 from ml_model import HealthcareMLModel, parse_natural_language_symptoms, recommend_specialization, classify_urgency
+import os
+from dotenv import load_dotenv
+from groq import Groq
 from database import db
+
+# Load environment variables
+load_dotenv()
+try:
+    groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+except Exception as e:
+    groq_client = None
+    print(f"Failed to initialize Groq client: {e}")
 
 ml = HealthcareMLModel()
 
@@ -120,230 +131,42 @@ def extract_drug_name(text: str) -> str:
 # ── Core: process a chat message ──────────────────────────────────────────────
 def process_message(user_id: int, user_message: str, session_history: list) -> dict:
     text = user_message.strip()
-    intent = detect_intent(text)
     ctx = get_patient_context(user_id)
     name = ctx.get("name","User").split()[0]
-
-    # ── EMERGENCY ─────────────────────────────────────────────────────────────
-    if intent == "emergency":
-        msg = (
-            f"🚨 **EMERGENCY ALERT, {name}!**\n\n"
-            "Your symptoms may indicate a **life-threatening condition**. "
-            "Please take **immediate action**:\n\n"
-            "📞 **Call 108 (Ambulance)** or go to the nearest Emergency Room immediately.\n\n"
-            "⚠ Do NOT wait or self-medicate for these symptoms.\n\n"
-            "_CuraAI recommends immediate professional medical care. This is not a substitute for emergency services._"
-        )
-        return build_response("emergency", {
-            "message": msg, "urgency": "CRITICAL",
-            "action": "Call 108 immediately", "color": "red"
-        })
-
-    # ── GREETING ──────────────────────────────────────────────────────────────
-    if intent == "greeting":
-        history_note = ""
-        if ctx.get("medical_history"):
-            history_note = f" I can see you have a history of **{ctx['medical_history']}** — I'll keep that in mind."
-        msg = (
-            f"👋 Hello {name}! I'm **CuraAI Assistant**, your personal AI health companion.{history_note}\n\n"
-            "I can help you with:\n"
-            "• 🩺 Symptom analysis and disease prediction\n"
-            "• 💊 Medicine information and dosage guidance\n"
-            "• 👨‍⚕️ Doctor specialization recommendations\n"
-            "• 📋 Prescription and report analysis\n"
-            "• 🌿 Personalized health tips\n\n"
-            "Just describe how you're feeling, and I'll assist you!"
-        )
-        return build_response("greeting", {"message": msg})
-
-    # ── HELP ──────────────────────────────────────────────────────────────────
-    if intent == "help":
-        msg = (
-            "🤖 **CuraAI Assistant — What I Can Do:**\n\n"
-            "**Symptom Analysis:** Tell me your symptoms in plain language like *'I have a sharp headache and fever for 3 days'*\n\n"
-            "**Medicine Info:** Ask *'What are the side effects of Metformin?'* or *'Tell me about Paracetamol'*\n\n"
-            "**Doctor Advice:** Ask *'Which doctor should I see for chest pain?'*\n\n"
-            "**Health Tips:** Ask *'Give me diet tips for diabetes'* or *'How can I improve my sleep?'*\n\n"
-            "**Emergency:** If you describe critical symptoms, I'll alert you immediately.\n\n"
-            "⚕ _All AI responses are for informational purposes only. Always consult a certified doctor._"
-        )
-        return build_response("help", {"message": msg})
-
-    # ── THANKS ────────────────────────────────────────────────────────────────
-    if intent == "thanks":
-        return build_response("thanks", {
-            "message": f"You're welcome, {name}! 😊 Stay healthy. Feel free to ask anything anytime!\n\n⚕ _Remember: Always verify AI recommendations with your doctor._"
-        })
-
-    # ── DRUG INFO ─────────────────────────────────────────────────────────────
-    if intent == "drug_info":
-        drug_name = extract_drug_name(text)
-        fda_data  = lookup_drug_openfda(drug_name)
-        rxnorm    = lookup_rxnorm(drug_name)
-
-        if fda_data:
-            # Check for patient allergies
-            allergy_note = ""
-            if ctx.get("allergies") and drug_name.lower() in ctx["allergies"].lower():
-                allergy_note = f"\n\n⚠ **ALLERGY ALERT:** Your profile shows an allergy to **{drug_name}**. Do NOT take this without consulting your doctor."
-
-            msg = (
-                f"💊 **{fda_data['name']} — Drug Information**\n\n"
-                f"**Indications (Uses):**\n{fda_data['indications']}\n\n"
-                f"**Recommended Dosage:**\n{fda_data['dosage']}\n\n"
-                f"**Side Effects:**\n{fda_data['side_effects']}\n\n"
-                f"**Important Warnings:**\n{fda_data['warnings']}"
-                f"{allergy_note}\n\n"
-                f"_Source: OpenFDA · RxCUI: {rxnorm['rxcui'] if rxnorm else 'N/A'}_\n\n"
-                "⚕ **Disclaimer:** Always take medicines under a licensed doctor's supervision. Do not self-medicate."
-            )
-        else:
-            # Fallback to local drug data
-            local = _local_drug_info(drug_name)
-            msg = (
-                f"💊 **{drug_name.title()}**\n\n{local}\n\n"
-                f"_RxCUI: {rxnorm['rxcui'] if rxnorm else 'Not found'}_\n\n"
-                "⚕ **Disclaimer:** Verify all medicine information with your pharmacist or doctor."
-            )
-        return build_response("drug_info", {"message": msg, "drug": drug_name})
-
-    # ── DOCTOR RECOMMENDATION ─────────────────────────────────────────────────
-    if intent == "doctor_recommend":
-        symptoms = parse_natural_language_symptoms(text)
-        spec = recommend_specialization([], "General") if not symptoms else None
-        if symptoms:
-            try:
-                preds = ml.predict_disease(symptoms)
-                disease = preds[0]["disease"] if preds else "General"
-                spec_result = recommend_specialization(symptoms, disease)
-                spec = spec_result.get("specialization", "General Physician")
-                reason = spec_result.get("reason", "")
-                msg = (
-                    f"👨‍⚕️ **Doctor Recommendation for {name}:**\n\n"
-                    f"Based on your symptoms, I recommend consulting a **{spec}**.\n\n"
-                    f"📌 Reason: {reason}\n\n"
-                    "You can book an appointment directly from the **Doctor Connect** tab in your dashboard.\n\n"
-                    "⚕ _This is an AI recommendation. A proper diagnosis requires physical examination._"
-                )
-            except Exception:
-                spec = "General Physician"
-                msg = f"👨‍⚕️ Based on your description, I recommend starting with a **General Physician**. They can refer you to the right specialist after evaluation."
-        else:
-            msg = "👨‍⚕️ Please describe your symptoms in detail and I'll recommend the right specialist for you!"
-        return build_response("doctor_recommend", {"message": msg, "specialization": spec})
-
-    # ── HEALTH TIP ────────────────────────────────────────────────────────────
-    if intent == "health_tip":
-        tips = _generate_health_tips(ctx, text)
-        msg = (
-            f"🌿 **Personalized Health Tips for {name}:**\n\n{tips}\n\n"
-            "⚕ _These tips are general wellness guidelines. Consult your doctor before making major health changes._"
-        )
-        return build_response("health_tip", {"message": msg})
-
-    # ── SYMPTOM ANALYSIS (primary AI flow) ───────────────────────────────────
-    parsed_symptoms = parse_natural_language_symptoms(text)
-    # Also include any explicitly named symptom tokens
-    token_symptoms = [w.replace(" ","_") for w in re.findall(r'\b(?:fever|headache|cough|nausea|fatigue|dizziness|chest pain|joint pain|rash|vomiting|diarrhea|weakness|shortness of breath|blurry vision|polyuria|polydipsia)\b', text.lower())]
-    all_symptoms = list(set(parsed_symptoms + token_symptoms))
-
-    if not all_symptoms:
-        msg = (
-            f"I understand you might be feeling unwell, {name}. Could you describe your symptoms more specifically?\n\n"
-            "For example:\n"
-            "• *'I have a severe headache and high fever for 2 days'*\n"
-            "• *'I feel chest tightness and shortness of breath'*\n"
-            "• *'I have joint pain, fatigue, and a skin rash'*\n\n"
-            "The more detail you give, the more accurate my analysis will be!"
-        )
-        return build_response("clarify", {"message": msg})
-
-    # Run ML prediction
-    predictions = []
-    try:
-        predictions = ml.predict_disease(all_symptoms)
-    except Exception as e:
-        print(f"[Chatbot] Prediction error: {e}")
-
-    if not predictions:
-        return build_response("general", {
-            "message": f"I detected these symptoms: **{', '.join([s.replace('_',' ') for s in all_symptoms])}**.\n\nUnfortunately I couldn't match these to a known condition pattern. Please consult a doctor for a proper evaluation.\n\n⚕ _Always seek professional medical advice._"
-        })
-
-    top = predictions[0]
-    disease  = top["disease"]
-    conf     = top["confidence"]
-    severity = top.get("severity","moderate")
     
-    # Get urgency
-    urgency_result = classify_urgency(all_symptoms, text, 0)
-    urgency_level  = urgency_result.get("level","Moderate")
-    urgency_icon   = urgency_result.get("icon","⚠")
-    urgency_advice = urgency_result.get("advice","")
-
-    # Get drug recommendations
-    try:
-        drug_recs = ml.get_drug_recommendations(disease)
-    except Exception:
-        drug_recs = {}
-
-    # Get specialist
-    try:
-        spec_result = recommend_specialization(all_symptoms, disease)
-        specialist  = spec_result.get("specialization", "General Physician")
-    except Exception:
-        specialist = "General Physician"
-
-    # Personalization — check patient history
-    history_note = ""
-    if ctx.get("medical_history") and any(d.lower() in ctx["medical_history"].lower() for d in [disease.lower(), disease.split()[0].lower()]):
-        history_note = f"\n\n📌 **Note:** Your medical profile indicates a history of {ctx['medical_history']}. This may be related to your current symptoms."
-
-    # Build medicines string
-    med_lines = ""
-    if drug_recs.get("medicines"):
-        for m in drug_recs["medicines"][:3]:
-            med_lines += f"  • **{m.get('name','')}** — {m.get('dosage','')} ({m.get('timing','')})\n"
+    if groq_client:
+        system_prompt = (
+            "You are CuraAI, an intelligent AI healthcare assistant. "
+            "Analyze symptoms carefully, suggest diseases, recommend doctors, medicines, precautions, and health habits. "
+            "Give different responses for different symptoms. "
+            f"The patient's name is {name}. Their profile context: {json.dumps(ctx)}. "
+            "Use Markdown for formatting."
+        )
+        
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        # Add a few recent messages for context
+        for msg in session_history[-5:]:
+            role = msg.get("role", "user")
+            messages.append({"role": role, "content": msg.get("message", "")})
+            
+        messages.append({"role": "user", "content": text})
+        
+        try:
+            chat_completion = groq_client.chat.completions.create(
+                messages=messages,
+                model="llama-3.1-8b-instant",
+                temperature=0.6,
+                max_tokens=1024,
+            )
+            response_text = chat_completion.choices[0].message.content
+            return build_response("symptom_analysis", {"message": response_text})
+        except Exception as e:
+            print(f"[Groq AI Error] {e}")
+            return build_response("error", {"message": "I'm sorry, my AI brain is currently unavailable. Please try again later."})
     else:
-        med_lines = "  • Please consult your doctor for appropriate medication.\n"
-
-    # Precautions
-    precautions_text = ""
-    if top.get("precautions"):
-        prec = top["precautions"]
-        if isinstance(prec, list):
-            precautions_text = "\n".join([f"  • {p}" for p in prec[:3]])
-        else:
-            precautions_text = f"  • {prec}"
-
-    # Emergency override
-    urgent_banner = ""
-    if urgency_level in ("Emergency","Severe"):
-        urgent_banner = f"\n\n🚨 **{urgency_level.upper()} URGENCY** — {urgency_advice}\n📞 **Please call 108 or visit an emergency room immediately.**"
-
-    msg = (
-        f"{urgency_icon} **Medical Analysis for {name}**\n\n"
-        f"**Detected Symptoms:** {', '.join([s.replace('_',' ').title() for s in all_symptoms])}\n\n"
-        f"**Most Likely Condition:**\n"
-        f"🔬 **{disease}** — {conf}% confidence | *{severity.title()} severity*\n\n"
-        + (f"**Other Possibilities:**\n" + "".join([f"  • {p['disease']} ({p['confidence']}%)\n" for p in predictions[1:3]]) + "\n" if len(predictions) > 1 else "")
-        + f"**Suggested Medicines:**\n{med_lines}\n"
-        f"**Precautions:**\n{precautions_text or '  • Rest and stay hydrated.'}\n\n"
-        f"**Recommended Specialist:** 👨‍⚕️ {specialist}\n"
-        f"**Next Steps:** {top.get('next_actions','Consult a doctor for proper diagnosis.')}"
-        f"{history_note}"
-        f"{urgent_banner}\n\n"
-        "⚕ **Disclaimer:** This is an AI analysis for informational purposes. Please verify with a licensed doctor before taking any medication."
-    )
-
-    return build_response("symptom_analysis", {
-        "message": msg,
-        "predictions": predictions[:3],
-        "symptoms": all_symptoms,
-        "urgency": urgency_level,
-        "specialist": specialist,
-        "drugs": drug_recs
-    })
+        # Fallback if Groq is not configured
+        return build_response("error", {"message": "Groq AI is not configured. Please add GROQ_API_KEY to .env."})
 
 
 # ── Local fallback drug info ──────────────────────────────────────────────────

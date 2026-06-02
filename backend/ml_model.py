@@ -10,146 +10,131 @@ import pickle
 
 # Define All Symptoms
 ALL_SYMPTOMS = [
-    "fever", "chills", "cough", "sore_throat", "muscle_aches", "fatigue", 
-    "polyuria", "polydipsia", "weight_loss", "blurry_vision",
-    "headache", "shortness_of_breath", "nosebleeds", "dizziness", "chest_pain",
-    "itchy_skin", "red_rash", "dry_skin", "skin_blisters",
-    "severe_headache", "nausea", "sensitivity_to_light", "sensitivity_to_sound", "aura",
-    "diarrhea", "bloating", "abdominal_pain", "salty_skin", "poor_growth",
-    "muscle_weakness", "slurred_speech", "muscle_cramps", "difficulty_swallowing",
-    "involuntary_movements", "cognitive_decline", "balance_issues", "depression",
-    "joint_pain", "butterfly_rash", "hair_loss", "heartburn", "acid_reflux",
-    "joint_stiffness", "swollen_joints", "weight_gain", "cold_intolerance",
-    "pale_skin", "weakness", "cold_hands"
+    # Systemic
+    "fever", "high_fever", "mild_fever", "chills", "fatigue", "weakness",
+    "weight_loss", "weight_gain", "night_sweats", "loss_of_appetite", "dehydration",
+    # Respiratory
+    "cough", "dry_cough", "cough_with_phlegm", "blood_in_sputum", "wheezing",
+    "shortness_of_breath", "breathlessness", "chest_tightness", "chest_pain",
+    # ENT
+    "sore_throat", "runny_nose", "sneezing", "nasal_congestion", "loss_of_smell",
+    "loss_of_taste", "nosebleeds", "ear_pain",
+    # Head / Neuro
+    "headache", "severe_headache", "morning_headache", "dizziness",
+    "sensitivity_to_light", "sensitivity_to_sound", "aura", "confusion",
+    "memory_loss", "cognitive_decline", "tremors", "seizures", "slurred_speech",
+    "balance_issues", "involuntary_movements", "loss_of_consciousness",
+    "slow_movement", "muscle_rigidity", "speech_changes",
+    # Mental health
+    "depression", "anxiety", "insomnia", "restlessness", "panic_attacks", "mood_swings",
+    # Eyes
+    "blurry_vision", "yellow_eyes", "eye_pain", "vision_changes", "itchy_eyes",
+    # Skin
+    "itchy_skin", "red_rash", "skin_rash", "dry_skin", "skin_blisters",
+    "butterfly_rash", "hair_loss", "pale_skin", "yellow_skin", "scaly_patches",
+    "red_patches", "rose_spots", "bleeding_tendency", "excessive_sweating",
+    # GI
+    "nausea", "vomiting", "diarrhea", "watery_diarrhea", "abdominal_pain",
+    "severe_abdominal_pain", "lower_right_pain", "bloating", "heartburn",
+    "acid_reflux", "constipation", "dark_urine", "jaundice", "abdominal_cramps",
+    "mucus_in_stool", "blood_in_stool",
+    # Urinary
+    "polyuria", "polydipsia", "frequent_urination", "burning_urination",
+    "cloudy_urine", "blood_in_urine", "pelvic_pain",
+    # Musculoskeletal
+    "joint_pain", "severe_joint_pain", "joint_stiffness", "swollen_joints",
+    "muscle_aches", "muscle_weakness", "muscle_cramps", "difficulty_swallowing",
+    "cold_hands", "lower_back_pain", "flank_pain", "back_pain", "neck_stiffness",
+    # Metabolic / Cardio
+    "cold_intolerance", "heat_intolerance", "rapid_heartbeat", "palpitations",
+    "radiating_arm_pain", "irregular_heartbeat", "low_blood_pressure",
+    # Other
+    "salty_skin", "poor_growth", "loud_snoring", "gasping_during_sleep",
+    "swollen_lymph_nodes", "swollen_face", "hand_foot_swelling"
 ]
 
-# Define Disease Database
+# ─── 35-Disease Metadata ───────────────────────────────────────────────────────
 DISEASE_METADATA = {
-    "Diabetes Type 2": {
-        "category": "lifestyle",
-        "severity": "medium",
-        "is_rare": False,
-        "precautions": ["Reduce carbohydrate intake", "Exercise 30 mins daily", "Monitor glucose weekly"],
-        "next_actions": "Schedule HbA1c test and consult a Diabetologist."
-    },
-    "Hypertension": {
-        "category": "chronic",
-        "severity": "medium",
-        "is_rare": False,
-        "precautions": ["Reduce sodium intake", "Avoid stress", "Monitor Blood Pressure twice daily"],
-        "next_actions": "Consult a Cardiologist for Blood Pressure management."
-    },
-    "Hypercholesterolemia": {
-        "category": "lifestyle",
-        "severity": "medium",
-        "is_rare": False,
-        "precautions": ["Avoid saturated fats", "Eat soluble fiber", "Daily cardiovascular exercise"],
-        "next_actions": "Request Lipid Profile blood test and review with General Physician."
-    },
-    "Influenza": {
-        "category": "common",
-        "severity": "low",
-        "is_rare": False,
-        "precautions": ["Complete bed rest", "Stay hydrated", "Isolate to prevent spreading"],
-        "next_actions": "Consult General Physician if fever stays above 102°F for 3 days."
-    },
-    "Dermatitis": {
-        "category": "common",
-        "severity": "low",
-        "is_rare": False,
-        "precautions": ["Moisturize skin frequently", "Avoid harsh soaps", "Apply cool compresses"],
-        "next_actions": "Consult a Dermatologist for topical steroid options."
-    },
-    "Migraine": {
-        "category": "chronic",
-        "severity": "low",
-        "is_rare": False,
-        "precautions": ["Avoid bright lights & loud sounds", "Maintain consistent sleep cycle", "Identify food triggers"],
-        "next_actions": "Consult a Neurologist if frequency exceeds twice a week."
-    },
-    "Celiac Disease": {
-        "category": "genetic",
-        "severity": "medium",
-        "is_rare": False,
-        "precautions": ["Strict gluten-free diet", "Read food labels carefully", "Avoid cross-contamination"],
-        "next_actions": "Consult Gastroenterologist for tTG-IgA testing."
-    },
-    "Cystic Fibrosis": {
-        "category": "genetic",
-        "severity": "high",
-        "is_rare": True,
-        "precautions": ["Chest physical therapy", "Use saline nebulizers", "Avoid smoke and dust"],
-        "next_actions": "Consult a Pulmonologist and Genetic Specialist immediately."
-    },
-    "ALS (Amyotrophic Lateral Sclerosis)": {
-        "category": "rare",
-        "severity": "critical",
-        "is_rare": True,
-        "precautions": ["Assistive physical therapy", "Nutritional monitoring", "Respiratory support plans"],
-        "next_actions": "Urgent consultation with a Neurologist specializing in motor neuron diseases."
-    },
-    "Huntington's Disease": {
-        "category": "genetic",
-        "severity": "critical",
-        "is_rare": True,
-        "precautions": ["Speech therapy", "Fall prevention planning", "Psychological counseling"],
-        "next_actions": "Consult Neurologist and Genetic Counselor for genetic mapping."
-    },
-    "Lupus": {
-        "category": "chronic",
-        "severity": "high",
-        "is_rare": False,
-        "precautions": ["Use high SPF sunscreen", "Manage physical stress", "Regular kidney checks"],
-        "next_actions": "Consult a Rheumatologist for autoimmune screening (ANA test)."
-    },
-    "Gastroesophageal Reflux (GERD)": {
-        "category": "lifestyle",
-        "severity": "low",
-        "is_rare": False,
-        "precautions": ["Eat small frequent meals", "Do not lie down for 2 hours after eating", "Avoid spicy foods"],
-        "next_actions": "Consult General Physician; consider endoscopy if symptoms persist."
-    },
-    "Rheumatoid Arthritis": {
-        "category": "chronic",
-        "severity": "medium",
-        "is_rare": False,
-        "precautions": ["Joint-friendly exercises", "Apply warm compresses for stiffness", "Maintain healthy weight"],
-        "next_actions": "Consult a Rheumatologist for joint health evaluation."
-    },
-    "Hypothyroidism": {
-        "category": "chronic",
-        "severity": "low",
-        "is_rare": False,
-        "precautions": ["Take levothyroxine on empty stomach", "Eat iodine-rich foods", "Monitor thyroid levels regularly"],
-        "next_actions": "Consult an Endocrinologist for Thyroid Panel test."
-    },
-    "Anemia": {
-        "category": "common",
-        "severity": "low",
-        "is_rare": False,
-        "precautions": ["Eat iron-rich foods (spinach, red meat)", "Consume Vitamin C with iron", "Avoid tea with meals"],
-        "next_actions": "Get a Complete Blood Count (CBC) test and consult General Physician."
-    }
+    "Common Cold":            {"category":"common",    "severity":"low",      "is_rare":False, "precautions":["Rest well","Drink warm fluids","Use steam inhalation"],                      "next_actions":"Self-care for 5–7 days; see GP if symptoms worsen."},
+    "Influenza (Flu)":        {"category":"common",    "severity":"low",      "is_rare":False, "precautions":["Bed rest","Stay hydrated","Isolate to avoid spread"],                        "next_actions":"Consult GP if fever persists >3 days or breathing worsens."},
+    "COVID-19":               {"category":"common",    "severity":"medium",   "is_rare":False, "precautions":["Isolate immediately","Monitor oxygen levels","Rest & hydrate"],               "next_actions":"Get tested; consult doctor if SpO2 drops below 94%."},
+    "Typhoid":                {"category":"common",    "severity":"medium",   "is_rare":False, "precautions":["Drink boiled water","Avoid raw food","Complete antibiotic course"],           "next_actions":"Blood culture test (Widal test); consult GP immediately."},
+    "Malaria":                {"category":"common",    "severity":"high",     "is_rare":False, "precautions":["Use mosquito nets","Apply insect repellent","Complete antimalarial course"],   "next_actions":"Urgent peripheral blood smear / RDT test. Consult GP."},
+    "Dengue Fever":           {"category":"common",    "severity":"high",     "is_rare":False, "precautions":["Rest","Increase fluid intake","Monitor platelet count daily"],                 "next_actions":"CBC with platelet count urgently. Avoid aspirin/ibuprofen."},
+    "Tuberculosis (TB)":      {"category":"chronic",   "severity":"high",     "is_rare":False, "precautions":["Complete 6-month TB therapy","Ventilate rooms","Wear mask in public"],         "next_actions":"Sputum AFB smear + chest X-ray. DOTS therapy immediately."},
+    "Pneumonia":              {"category":"common",    "severity":"high",     "is_rare":False, "precautions":["Complete antibiotic course","Bed rest","Monitor breathing"],                   "next_actions":"Chest X-ray + CBC. Urgent GP/hospital consultation."},
+    "Asthma":                 {"category":"chronic",   "severity":"medium",   "is_rare":False, "precautions":["Avoid allergens & smoke","Carry reliever inhaler","Monitor peak flow"],        "next_actions":"Pulmonologist consultation + spirometry test."},
+    "Diabetes Type 2":        {"category":"lifestyle", "severity":"medium",   "is_rare":False, "precautions":["Low-carb diet","Exercise 30 min daily","Check glucose daily"],                 "next_actions":"HbA1c test + Fasting Blood Glucose. Consult Diabetologist."},
+    "Hypertension":           {"category":"chronic",   "severity":"medium",   "is_rare":False, "precautions":["Restrict salt to <2g/day","Exercise daily","Avoid stress"],                   "next_actions":"Monitor BP twice daily. Consult Cardiologist."},
+    "Heart Attack (CAD)":     {"category":"critical",  "severity":"critical", "is_rare":False, "precautions":["Chew aspirin 325mg immediately","Call 108 now","Do not exert"],               "next_actions":"EMERGENCY — Call 108 immediately. ECG + troponin test."},
+    "Stroke":                 {"category":"critical",  "severity":"critical", "is_rare":False, "precautions":["Act FAST: Face droop, Arm weakness, Speech, Time to call 108","Do not give food/water"], "next_actions":"EMERGENCY — 108 immediately. Brain CT scan needed."},
+    "Hypercholesterolemia":   {"category":"lifestyle", "severity":"medium",   "is_rare":False, "precautions":["Avoid saturated fats","Eat oats & fiber","Daily 30 min exercise"],            "next_actions":"Lipid Profile test. Consult GP or Cardiologist."},
+    "Migraine":               {"category":"chronic",   "severity":"low",      "is_rare":False, "precautions":["Identify triggers","Sleep at fixed times","Avoid bright screens"],             "next_actions":"Neurologist if frequency >2/week."},
+    "Epilepsy":               {"category":"chronic",   "severity":"high",     "is_rare":False, "precautions":["Take medications strictly","Avoid sleep deprivation","Do not drive during active seizures"], "next_actions":"EEG test + Neurologist consultation urgently."},
+    "Parkinson's Disease":    {"category":"chronic",   "severity":"high",     "is_rare":False, "precautions":["Physical + occupational therapy","Fall prevention","Regular medication timing"], "next_actions":"Neurology consultation. DaTscan imaging if needed."},
+    "Anxiety Disorder":       {"category":"mental",    "severity":"medium",   "is_rare":False, "precautions":["CBT therapy","Limit caffeine","Practice mindfulness 10 min/day"],              "next_actions":"Consult Psychiatrist or clinical Psychologist."},
+    "Depression":             {"category":"mental",    "severity":"medium",   "is_rare":False, "precautions":["Maintain social connections","Regular mild exercise","Sleep hygiene"],         "next_actions":"Consult Psychiatrist. Consider CBT/SSRI therapy."},
+    "UTI (Urinary Tract Infection)": {"category":"common","severity":"low",   "is_rare":False, "precautions":["Drink 3L water/day","Empty bladder fully","Wipe front to back"],               "next_actions":"Urine Culture + Sensitivity test. Course of antibiotics."},
+    "Kidney Stones":          {"category":"common",    "severity":"high",     "is_rare":False, "precautions":["Drink 3L water/day","Reduce salt & protein","Avoid oxalate-rich foods"],      "next_actions":"Urgent KUB ultrasound. Pain management + urology consult."},
+    "Gastroesophageal Reflux (GERD)": {"category":"lifestyle","severity":"low","is_rare":False,"precautions":["Small frequent meals","No eating 2 hrs before bed","Elevate bed head"],       "next_actions":"GP consult; endoscopy if symptoms persist >4 weeks."},
+    "Appendicitis":           {"category":"common",    "severity":"critical", "is_rare":False, "precautions":["Do NOT eat or drink","Do not apply heat to abdomen","Seek emergency care NOW"], "next_actions":"EMERGENCY — Hospital immediately. Surgical evaluation needed."},
+    "Jaundice / Hepatitis":   {"category":"common",    "severity":"high",     "is_rare":False, "precautions":["Avoid alcohol completely","Rest","Eat light easily digestible foods"],         "next_actions":"Liver Function Test (LFT) + Hepatitis panel. Gastroenterologist consult."},
+    "Gallstones":             {"category":"common",    "severity":"medium",   "is_rare":False, "precautions":["Low-fat diet","Avoid large fatty meals","Maintain healthy weight"],            "next_actions":"Abdominal ultrasound. Gastroenterologist/surgeon consult."},
+    "Anemia":                 {"category":"common",    "severity":"low",      "is_rare":False, "precautions":["Eat iron-rich foods","Take Vitamin C with iron","Avoid tea with meals"],       "next_actions":"CBC test. Consult GP."},
+    "Hypothyroidism":         {"category":"chronic",   "severity":"low",      "is_rare":False, "precautions":["Take levothyroxine on empty stomach","Eat iodine-rich foods","TSH test every 6 months"], "next_actions":"Thyroid Panel test. Consult Endocrinologist."},
+    "Hyperthyroidism":        {"category":"chronic",   "severity":"medium",   "is_rare":False, "precautions":["Avoid iodine excess","Manage stress","Regular thyroid monitoring"],            "next_actions":"TSH/T3/T4 test. Endocrinologist consult urgently."},
+    "Rheumatoid Arthritis":   {"category":"chronic",   "severity":"medium",   "is_rare":False, "precautions":["Joint-friendly exercise","Apply warm compress","Maintain healthy weight"],      "next_actions":"RF + Anti-CCP blood test. Rheumatologist consult."},
+    "Lupus":                  {"category":"chronic",   "severity":"high",     "is_rare":False, "precautions":["Use SPF 50+ sunscreen","Manage physical stress","Regular kidney checks"],       "next_actions":"ANA blood test. Rheumatologist consult."},
+    "Psoriasis":              {"category":"chronic",   "severity":"low",      "is_rare":False, "precautions":["Moisturize daily","Avoid triggers (stress, smoking)","Use prescribed topicals"], "next_actions":"Dermatologist consult. Consider phototherapy."},
+    "Dermatitis (Eczema)":    {"category":"common",    "severity":"low",      "is_rare":False, "precautions":["Avoid harsh soaps","Moisturize frequently","Use gentle detergents"],           "next_actions":"Dermatologist consult for topical steroid prescription."},
+    "Sleep Apnea":            {"category":"lifestyle", "severity":"medium",   "is_rare":False, "precautions":["Lose weight if overweight","Sleep on side","Avoid alcohol before bed"],        "next_actions":"Sleep study (polysomnography). ENT/Sleep specialist consult."},
+    "Celiac Disease":         {"category":"genetic",   "severity":"medium",   "is_rare":False, "precautions":["Strict gluten-free diet","Read all food labels","Avoid cross-contamination"],  "next_actions":"tTG-IgA blood test. Gastroenterologist consult."},
+    "ALS (Amyotrophic Lateral Sclerosis)": {"category":"rare","severity":"critical","is_rare":True,"precautions":["Assistive physical therapy","Nutritional monitoring","Respiratory support"],   "next_actions":"Urgent Neurologist consult. EMG/nerve conduction study."},
+    "Huntington's Disease":   {"category":"genetic",   "severity":"critical", "is_rare":True,  "precautions":["Speech therapy","Fall prevention","Psychological counseling"],                  "next_actions":"Genetic testing + Neurologist consult."},
+    "Cystic Fibrosis":        {"category":"genetic",   "severity":"high",     "is_rare":True,  "precautions":["Chest physiotherapy","Saline nebulizers","High-calorie diet"],                  "next_actions":"Pulmonologist + Genetic Specialist consult."},
 }
 
-# Mapping of diseases to typical symptoms for dataset generation
+# ─── 35-Disease Symptom Map (each disease has DISTINCT symptom patterns) ────────
 DISEASE_SYMPTOMS_MAP = {
-    "Diabetes Type 2": ["polyuria", "polydipsia", "fatigue", "weight_loss", "blurry_vision"],
-    "Hypertension": ["headache", "shortness_of_breath", "nosebleeds", "dizziness", "chest_pain"],
-    "Hypercholesterolemia": ["chest_pain", "dizziness", "fatigue"],
-    "Influenza": ["fever", "chills", "cough", "sore_throat", "muscle_aches", "fatigue"],
-    "Dermatitis": ["itchy_skin", "red_rash", "dry_skin", "skin_blisters"],
-    "Migraine": ["severe_headache", "nausea", "sensitivity_to_light", "sensitivity_to_sound", "aura"],
-    "Celiac Disease": ["diarrhea", "bloating", "abdominal_pain", "weight_loss", "fatigue"],
-    "Cystic Fibrosis": ["cough", "shortness_of_breath", "salty_skin", "poor_growth"],
-    "ALS (Amyotrophic Lateral Sclerosis)": ["muscle_weakness", "slurred_speech", "muscle_cramps", "difficulty_swallowing"],
-    "Huntington's Disease": ["involuntary_movements", "cognitive_decline", "balance_issues", "depression"],
-    "Lupus": ["joint_pain", "butterfly_rash", "fever", "fatigue", "hair_loss"],
-    "Gastroesophageal Reflux (GERD)": ["heartburn", "acid_reflux", "chest_pain", "difficulty_swallowing"],
-    "Rheumatoid Arthritis": ["joint_stiffness", "swollen_joints", "fatigue", "joint_pain"],
-    "Hypothyroidism": ["weight_gain", "dry_skin", "cold_intolerance", "fatigue", "muscle_weakness"],
-    "Anemia": ["pale_skin", "fatigue", "weakness", "cold_hands", "dizziness"]
+    "Common Cold":            ["mild_fever","runny_nose","sneezing","sore_throat","nasal_congestion","cough"],
+    "Influenza (Flu)":        ["high_fever","chills","muscle_aches","headache","fatigue","cough","sore_throat"],
+    "COVID-19":               ["fever","dry_cough","fatigue","loss_of_smell","loss_of_taste","shortness_of_breath"],
+    "Typhoid":                ["high_fever","abdominal_pain","constipation","rose_spots","headache","weakness"],
+    "Malaria":                ["high_fever","chills","excessive_sweating","headache","nausea","muscle_aches","fatigue"],
+    "Dengue Fever":           ["high_fever","severe_joint_pain","eye_pain","skin_rash","bleeding_tendency","headache"],
+    "Tuberculosis (TB)":      ["cough_with_phlegm","blood_in_sputum","night_sweats","weight_loss","fever","fatigue"],
+    "Pneumonia":              ["high_fever","chest_pain","cough_with_phlegm","shortness_of_breath","fatigue","chills"],
+    "Asthma":                 ["wheezing","shortness_of_breath","chest_tightness","dry_cough","breathlessness"],
+    "Diabetes Type 2":        ["polyuria","polydipsia","blurry_vision","weight_loss","fatigue","slow_movement"],
+    "Hypertension":           ["headache","dizziness","nosebleeds","shortness_of_breath","chest_pain","morning_headache"],
+    "Heart Attack (CAD)":     ["chest_pain","radiating_arm_pain","shortness_of_breath","excessive_sweating","nausea","palpitations"],
+    "Stroke":                 ["slurred_speech","confusion","severe_headache","vision_changes","loss_of_consciousness","balance_issues"],
+    "Hypercholesterolemia":   ["chest_pain","dizziness","fatigue","palpitations"],
+    "Migraine":               ["severe_headache","sensitivity_to_light","sensitivity_to_sound","nausea","aura","vision_changes"],
+    "Epilepsy":               ["seizures","loss_of_consciousness","confusion","muscle_rigidity","fatigue"],
+    "Parkinson's Disease":    ["tremors","slow_movement","muscle_rigidity","balance_issues","speech_changes","depression"],
+    "Anxiety Disorder":       ["restlessness","rapid_heartbeat","insomnia","panic_attacks","excessive_sweating","anxiety"],
+    "Depression":             ["depression","fatigue","insomnia","loss_of_appetite","mood_swings","weakness"],
+    "UTI (Urinary Tract Infection)": ["burning_urination","frequent_urination","cloudy_urine","pelvic_pain","lower_back_pain","mild_fever"],
+    "Kidney Stones":          ["flank_pain","severe_abdominal_pain","blood_in_urine","nausea","vomiting","frequent_urination"],
+    "Gastroesophageal Reflux (GERD)": ["heartburn","acid_reflux","chest_pain","difficulty_swallowing","nausea","bloating"],
+    "Appendicitis":           ["lower_right_pain","nausea","vomiting","fever","loss_of_appetite","abdominal_cramps"],
+    "Jaundice / Hepatitis":   ["yellow_skin","yellow_eyes","dark_urine","fatigue","abdominal_pain","nausea","loss_of_appetite"],
+    "Gallstones":             ["severe_abdominal_pain","nausea","vomiting","jaundice","back_pain"],
+    "Anemia":                 ["pale_skin","fatigue","weakness","cold_hands","dizziness","shortness_of_breath"],
+    "Hypothyroidism":         ["weight_gain","dry_skin","cold_intolerance","fatigue","muscle_weakness","depression","hair_loss"],
+    "Hyperthyroidism":        ["weight_loss","rapid_heartbeat","heat_intolerance","tremors","insomnia","anxiety","excessive_sweating"],
+    "Rheumatoid Arthritis":   ["joint_stiffness","swollen_joints","joint_pain","fatigue","morning_headache"],
+    "Lupus":                  ["butterfly_rash","joint_pain","fever","fatigue","hair_loss","chest_pain"],
+    "Psoriasis":              ["scaly_patches","red_patches","itchy_skin","joint_pain","skin_rash"],
+    "Dermatitis (Eczema)":    ["itchy_skin","red_rash","dry_skin","skin_blisters","itchy_eyes"],
+    "Sleep Apnea":            ["loud_snoring","morning_headache","fatigue","gasping_during_sleep","insomnia","depression"],
+    "Celiac Disease":         ["diarrhea","bloating","abdominal_pain","weight_loss","fatigue","poor_growth"],
+    "ALS (Amyotrophic Lateral Sclerosis)": ["muscle_weakness","slurred_speech","muscle_cramps","difficulty_swallowing","balance_issues"],
+    "Huntington's Disease":   ["involuntary_movements","cognitive_decline","balance_issues","depression","speech_changes"],
+    "Cystic Fibrosis":        ["cough_with_phlegm","shortness_of_breath","salty_skin","poor_growth","wheezing"],
 }
+
 
 # Drug Recommendations Mapping Database
 DRUG_RECOMMENDATION_DATABASE = {
@@ -486,7 +471,7 @@ class HealthcareMLModel:
         if patient_profile:
             age = patient_profile.get("age")
             weight = patient_profile.get("weight")
-            history = patient_profile.get("medical_history", "").lower()
+            history = (patient_profile.get("medical_history") or "").lower()
             
             # Age adjustment
             if age and age < 12:
@@ -665,6 +650,40 @@ NLP_KEYWORD_MAP = {
     "sensitivity to light": "sensitivity_to_light", "light sensitivity": "sensitivity_to_light",
     "sensitivity to sound": "sensitivity_to_sound", "aura": "aura",
     "cold intolerance": "cold_intolerance", "always cold": "cold_intolerance",
+    "high fever": "high_fever", "mild fever": "mild_fever", "night sweats": "night_sweats",
+    "excessive sweating": "excessive_sweating", "dry cough": "dry_cough",
+    "cough with phlegm": "cough_with_phlegm", "coughing blood": "blood_in_sputum",
+    "wheezing": "wheezing", "breathlessness": "breathlessness", "chest tightness": "chest_tightness",
+    "runny nose": "runny_nose", "sneezing": "sneezing", "nasal congestion": "nasal_congestion",
+    "stuffy nose": "nasal_congestion", "loss of smell": "loss_of_smell", "loss of taste": "loss_of_taste",
+    "ear pain": "ear_pain", "yellow eyes": "yellow_eyes", "eye pain": "eye_pain", "itchy eyes": "itchy_eyes",
+    "yellow skin": "yellow_skin", "jaundice": "yellow_skin", "scaly patches": "scaly_patches",
+    "red patches": "red_patches", "rose spots": "rose_spots", "bleeding tendency": "bleeding_tendency",
+    "bruising easily": "bleeding_tendency", "skin rash": "skin_rash",
+    "severe joint pain": "severe_joint_pain", "body ache": "muscle_aches", "back pain": "back_pain",
+    "lower back pain": "lower_back_pain", "flank pain": "flank_pain", "side pain": "flank_pain",
+    "frequent urination": "frequent_urination", "urinating often": "frequent_urination",
+    "peeing a lot": "frequent_urination", "polyuria": "polyuria",
+    "burning urination": "burning_urination", "pain when urinating": "burning_urination",
+    "cloudy urine": "cloudy_urine", "blood in urine": "blood_in_urine", "pelvic pain": "pelvic_pain",
+    "vomiting": "vomiting", "vomit": "vomiting", "severe stomach pain": "severe_abdominal_pain",
+    "right side pain": "lower_right_pain", "stomach cramps": "abdominal_cramps",
+    "loose motions": "diarrhea", "watery stool": "watery_diarrhea", "constipation": "constipation",
+    "dark urine": "dark_urine", "blood in stool": "blood_in_stool", "mucus in stool": "mucus_in_stool",
+    "loss of appetite": "loss_of_appetite", "not eating": "loss_of_appetite", "dehydrated": "dehydration",
+    "tremors": "tremors", "shaking hands": "tremors", "fits": "seizures", "convulsions": "seizures",
+    "fainted": "loss_of_consciousness", "unconscious": "loss_of_consciousness",
+    "confusion": "confusion", "forgetful": "memory_loss", "slow movement": "slow_movement",
+    "muscle rigidity": "muscle_rigidity", "cold hands": "cold_hands", "cold feet": "cold_hands",
+    "anxiety": "anxiety", "anxious": "anxiety", "panic attack": "panic_attacks",
+    "restless": "restlessness", "mood swings": "mood_swings",
+    "palpitations": "palpitations", "heart racing": "rapid_heartbeat",
+    "radiating arm pain": "radiating_arm_pain", "heat intolerance": "heat_intolerance",
+    "loud snoring": "loud_snoring", "snoring": "loud_snoring",
+    "gasping in sleep": "gasping_during_sleep", "swollen glands": "swollen_lymph_nodes",
+    "foot swelling": "hand_foot_swelling", "ankle swelling": "hand_foot_swelling",
+    "weight gain": "weight_gain", "gaining weight": "weight_gain", "tummy ache": "abdominal_pain",
+    "body pain": "muscle_aches", "tummy pain": "abdominal_pain",
 }
 
 def parse_natural_language_symptoms(text):
@@ -762,21 +781,43 @@ def classify_urgency(symptoms, description="", duration_days=0):
 # ─────────────────────────────────────────────────────────────────
 
 DISEASE_TO_SPECIALIZATION = {
+    "Common Cold": "General Physician",
+    "Influenza (Flu)": "General Physician",
+    "COVID-19": "General Physician",
+    "Typhoid": "General Physician",
+    "Malaria": "General Physician",
+    "Dengue Fever": "General Physician",
+    "Tuberculosis (TB)": "Pulmonologist",
+    "Pneumonia": "Pulmonologist",
+    "Asthma": "Pulmonologist",
     "Diabetes Type 2": "Diabetologist",
     "Hypertension": "Cardiologist",
+    "Heart Attack (CAD)": "Cardiologist",
+    "Stroke": "Neurologist",
     "Hypercholesterolemia": "Cardiologist",
-    "Influenza": "General Physician",
-    "Dermatitis": "Dermatologist",
     "Migraine": "Neurologist",
+    "Epilepsy": "Neurologist",
+    "Parkinson's Disease": "Neurologist",
+    "Anxiety Disorder": "Psychiatrist",
+    "Depression": "Psychiatrist",
+    "UTI (Urinary Tract Infection)": "General Physician",
+    "Kidney Stones": "Urologist",
+    "Gastroesophageal Reflux (GERD)": "Gastroenterologist",
+    "Appendicitis": "General Surgeon",
+    "Jaundice / Hepatitis": "Gastroenterologist",
+    "Gallstones": "Gastroenterologist",
+    "Anemia": "General Physician",
+    "Hypothyroidism": "Endocrinologist",
+    "Hyperthyroidism": "Endocrinologist",
+    "Rheumatoid Arthritis": "Rheumatologist",
+    "Lupus": "Rheumatologist",
+    "Psoriasis": "Dermatologist",
+    "Dermatitis (Eczema)": "Dermatologist",
+    "Sleep Apnea": "ENT Specialist",
     "Celiac Disease": "Gastroenterologist",
-    "Cystic Fibrosis": "Pulmonologist",
     "ALS (Amyotrophic Lateral Sclerosis)": "Neurologist",
     "Huntington's Disease": "Neurologist",
-    "Lupus": "Rheumatologist",
-    "Gastroesophageal Reflux (GERD)": "Gastroenterologist",
-    "Rheumatoid Arthritis": "Orthopedic",
-    "Hypothyroidism": "Endocrinologist",
-    "Anemia": "General Physician",
+    "Cystic Fibrosis": "Pulmonologist",
 }
 
 SYMPTOM_TO_SPECIALIZATION = {

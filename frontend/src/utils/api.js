@@ -215,6 +215,47 @@ export const api = {
     return data;
   },
 
+  // Medicine Reminders (Full CRUD)
+  getReminders: async () => {
+    const res = await fetch(`${API_BASE_URL}/reminders`, { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to load reminders');
+    return data;
+  },
+  addReminder: async (reminderData) => {
+    const res = await fetch(`${API_BASE_URL}/reminders`, {
+      method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(reminderData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to add reminder');
+    return data;
+  },
+  updateReminder: async (id, reminderData) => {
+    const res = await fetch(`${API_BASE_URL}/reminders/${id}`, {
+      method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(reminderData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to update reminder');
+    return data;
+  },
+  deleteReminder: async (id) => {
+    const res = await fetch(`${API_BASE_URL}/reminders/${id}`, {
+      method: 'DELETE', headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to delete reminder');
+    return data;
+  },
+  setMedicineReminder: async (medicineName, reminderTime) => {
+    const res = await fetch(`${API_BASE_URL}/medicine-reminder`, {
+      method: 'POST', headers: getAuthHeaders(),
+      body: JSON.stringify({ medicine_name: medicineName, reminder_time: reminderTime })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to set reminder');
+    return data;
+  },
+
   // Chatbot
   sendChatMessage: async (message) => {
     const res = await fetch(`${API_BASE_URL}/chat`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ message }) });
@@ -235,3 +276,4 @@ export const api = {
     return data;
   },
 };
+

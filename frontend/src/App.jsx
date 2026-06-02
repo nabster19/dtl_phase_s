@@ -70,6 +70,8 @@ export default function App() {
   const [reminderForm, setReminderForm] = useState({
     medicine_name: '', reminder_time: '08:00 AM'
   });
+  const [remindersList, setRemindersList] = useState([]);
+
 
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
@@ -166,6 +168,12 @@ export default function App() {
             medications: prof.medications || '', emergency_contact: prof.emergency_contact || ''
           });
         } catch(pe) { console.warn('Profile load:', pe.message); }
+
+        // Load reminders
+        try {
+          const remData = await api.getReminders();
+          setRemindersList(remData.reminders || []);
+        } catch(re) { console.warn('Reminders load:', re.message); }
       } else if (userRole === 'doctor') {
         const apptList = await api.getAppointments();
         setAppointments(apptList);
@@ -490,10 +498,23 @@ export default function App() {
     e.preventDefault();
     if (!reminderForm.medicine_name) return;
     try {
-      const res = await api.setMedicineReminder(reminderForm.medicine_name, reminderForm.reminder_time);
+      const res = await api.addReminder(reminderForm);
       showToast(res.message, "success");
       setReminderForm({ medicine_name: '', reminder_time: '08:00 AM' });
-      fetchUserData(role);
+      const remData = await api.getReminders();
+      setRemindersList(remData.reminders || []);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  };
+
+  const handleDeleteReminder = async (id) => {
+    if (!confirm('Delete this reminder?')) return;
+    try {
+      const res = await api.deleteReminder(id);
+      showToast(res.message, "success");
+      const remData = await api.getReminders();
+      setRemindersList(remData.reminders || []);
     } catch (err) {
       showToast(err.message, "error");
     }
@@ -914,33 +935,33 @@ export default function App() {
                   </button>
                 </form>
 
-                {/* Hardcoded list of active reminders */}
+                {/* Dynamic list of active reminders */}
                 <div className="space-y-3">
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl flex justify-between items-center">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2.5 bg-sky-100 dark:bg-sky-900/30 text-sky-500 rounded-lg">
-                        <Clock className="w-4 h-4" />
+                  {remindersList.length === 0 ? (
+                    <div className="text-sm text-slate-400 text-center py-4">No active reminders. Add one above.</div>
+                  ) : (
+                    remindersList.map((rem) => (
+                      <div key={rem.id} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl flex justify-between items-center group">
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2.5 bg-sky-100 dark:bg-sky-900/30 text-sky-500 rounded-lg">
+                            <Clock className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-sm">{rem.medicine_name}</div>
+                            <div className="text-xs text-slate-400">Scheduled: {rem.reminder_time} ({rem.frequency})</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`text-xs font-semibold px-2 py-1 rounded ${rem.is_active ? 'text-sky-500 bg-sky-50 dark:bg-sky-900/20' : 'text-slate-500 bg-slate-200 dark:bg-slate-700'}`}>
+                            {rem.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                          <button onClick={() => handleDeleteReminder(rem.id)} className="opacity-0 group-hover:opacity-100 text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition">
+                            ✕
+                          </button>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-semibold text-sm">Metformin HCL</div>
-                        <div className="text-xs text-slate-400">Scheduled: 08:00 AM (Twice daily)</div>
-                      </div>
-                    </div>
-                    <span className="text-xs text-sky-500 font-semibold bg-sky-50 dark:bg-sky-900/20 px-2 py-1 rounded">Active</span>
-                  </div>
-
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl flex justify-between items-center">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2.5 bg-sky-100 dark:bg-sky-900/30 text-sky-500 rounded-lg">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-sm">Lisinopril Tablet</div>
-                        <div className="text-xs text-slate-400">Scheduled: 08:00 AM (Once daily)</div>
-                      </div>
-                    </div>
-                    <span className="text-xs text-sky-500 font-semibold bg-sky-50 dark:bg-sky-900/20 px-2 py-1 rounded">Active</span>
-                  </div>
+                    ))
+                  )}
                 </div>
               </div>
 

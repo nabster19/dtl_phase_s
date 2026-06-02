@@ -102,7 +102,7 @@ export default function Chatbot({ darkMode }) {
       const res = await api.sendChatMessage(msg);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        text: res.reply,
+        text: res.response || res.reply,
         type: res.type || 'general',
         data: res.data || {},
         time: new Date().toISOString(),
