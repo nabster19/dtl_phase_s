@@ -4,6 +4,7 @@
 import re
 import os
 from PIL import Image
+from chatbot_engine import groq_client
 
 try:
     import pytesseract
@@ -121,64 +122,105 @@ def extract_entities_from_text(text):
     }
 
 def summarize_text(text, filename="Report"):
-    """Generate a medical summary based on the text contents."""
-    text_lower = text.lower()
-    summary = f"Summary of {filename}:\n"
-    
-    # Check severity indicators
-    severity = "low"
-    critical_keywords = ["critical", "severe", "malignant", "acute renal failure", "myocardial infarction", "high risk", "stage 3", "stage 4", "emergency"]
-    medium_keywords = ["abnormal", "elevated", "infection", "moderate", "chronic", "mild", "borderline"]
-
-    if any(k in text_lower for k in critical_keywords):
-        severity = "critical"
-    elif any(k in text_lower for k in medium_keywords):
-        severity = "medium"
-
-    # Identify document type
-    doc_type = "Medical Report"
-    if "blood test" in text_lower or "cbc" in text_lower or "hemoglobin" in text_lower or "lipid" in text_lower:
-        doc_type = "Blood Test Report"
-    elif "x-ray" in text_lower or "chest xray" in text_lower:
-        doc_type = "X-Ray Scan"
-    elif "mri" in text_lower or "ct scan" in text_lower or "ultrasound" in text_lower:
-        doc_type = "Advanced Scan Report"
-    elif "prescription" in text_lower or "rx" in text_lower:
-        doc_type = "Prescription"
-
-    summary += f"- Type: {doc_type}\n"
-    
+    """Generate a medical summary based on the text contents using AI."""
+    # Run the basic regex extractors to get structured fields
     entities = extract_entities_from_text(text)
     diagnosis_str = ", ".join(entities["diagnoses"])
     medicines_str = ", ".join(entities["medicines"])
 
-    summary += f"- Primary Finding / Indication: {diagnosis_str}\n"
-    if medicines_str:
-        summary += f"- Extracted Medications: {medicines_str}\n"
+    summary = ""
+    # Try using Groq LLM for intelligent summarization
+    if groq_client:
+        prompt = f"""
+You are a highly capable AI medical assistant. I am passing you the raw OCR extracted text from a patient's medical document ({filename}).
+Your task is to analyze the text and output a highly professional, easy-to-read summary.
 
-    # Blood pressure extraction
-    bp_match = re.search(r'bp\s*[:\-]?\s*(\d{2,3})\s*/\s*(\d{2,3})', text_lower)
-    if bp_match:
-        summary += f"- Blood Pressure recorded: {bp_match.group(1)}/{bp_match.group(2)} mmHg\n"
+Requirements:
+1. Identify the Document Type (e.g., Blood Test, Prescription, Discharge Summary).
+2. Extract the Primary Diagnosis or Findings.
+3. List extracted Medications (with dosage if available).
+4. Highlight Critical Vitals or Abnormal test parameters (e.g., Blood Pressure, Glucose).
+5. Determine the Severity (Low, Medium, Critical).
+6. Give a short Recommendation (e.g., "Consult physician", "Monitor diet").
+Keep it concise and format using bullet points. Do not make up medical facts outside the provided text.
 
-    # Sugar level extraction
-    sugar_match = re.search(r'(?:sugar|glucose)\s*[:\-]?\s*(\d{2,3})\s*mg/dl', text_lower)
-    if sugar_match:
-        summary += f"- Blood Glucose: {sugar_match.group(1)} mg/dL\n"
+RAW OCR TEXT:
+{text}
+"""
+        try:
+            chat_completion = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama-3.1-8b-instant",
+                max_tokens=300,
+                temperature=0.3
+            )
+            summary = chat_completion.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"[OCR] Groq LLM summarization failed: {e}. Falling back to Regex parser.")
+            summary = ""
 
-    # Cholesterol extraction
-    chol_match = re.search(r'(?:cholesterol|ldl|hdl)\s*[:\-]?\s*(\d{2,3})\s*mg/dl', text_lower)
-    if chol_match:
-        summary += f"- Cholesterol: {chol_match.group(1)} mg/dL\n"
+    # Fallback to regex-based summarizer if LLM failed
+    if not summary:
+        text_lower = text.lower()
+        summary = f"Summary of {filename}:\n"
+        
+        # Check severity indicators
+        severity = "low"
+        critical_keywords = ["critical", "severe", "malignant", "acute renal failure", "myocardial infarction", "high risk", "stage 3", "stage 4", "emergency"]
+        medium_keywords = ["abnormal", "elevated", "infection", "moderate", "chronic", "mild", "borderline"]
 
-    summary += f"- Clinical Severity Alert: {severity.upper()}\n"
-    
-    if severity == "critical":
-        summary += "- RECOMMENDATION: Immediate contact with your physician or primary care specialist is advised."
-    elif severity == "medium":
-        summary += "- RECOMMENDATION: Monitor symptoms and review with doctor during next scheduled visit."
+        if any(k in text_lower for k in critical_keywords):
+            severity = "critical"
+        elif any(k in text_lower for k in medium_keywords):
+            severity = "medium"
+
+        # Identify document type
+        doc_type = "Medical Report"
+        if "blood test" in text_lower or "cbc" in text_lower or "hemoglobin" in text_lower or "lipid" in text_lower:
+            doc_type = "Blood Test Report"
+        elif "x-ray" in text_lower or "chest xray" in text_lower:
+            doc_type = "X-Ray Scan"
+        elif "mri" in text_lower or "ct scan" in text_lower or "ultrasound" in text_lower:
+            doc_type = "Advanced Scan Report"
+        elif "prescription" in text_lower or "rx" in text_lower:
+            doc_type = "Prescription"
+
+        summary += f"- Type: {doc_type}\n"
+        
+        summary += f"- Primary Finding / Indication: {diagnosis_str}\n"
+        if medicines_str:
+            summary += f"- Extracted Medications: {medicines_str}\n"
+
+        # Blood pressure extraction
+        bp_match = re.search(r'bp\s*[:\-]?\s*(\d{2,3})\s*/\s*(\d{2,3})', text_lower)
+        if bp_match:
+            summary += f"- Blood Pressure recorded: {bp_match.group(1)}/{bp_match.group(2)} mmHg\n"
+
+        # Sugar level extraction
+        sugar_match = re.search(r'(?:sugar|glucose)\s*[:\-]?\s*(\d{2,3})\s*mg/dl', text_lower)
+        if sugar_match:
+            summary += f"- Blood Glucose: {sugar_match.group(1)} mg/dL\n"
+
+        # Cholesterol extraction
+        chol_match = re.search(r'(?:cholesterol|ldl|hdl)\s*[:\-]?\s*(\d{2,3})\s*mg/dl', text_lower)
+        if chol_match:
+            summary += f"- Cholesterol: {chol_match.group(1)} mg/dL\n"
+
+        summary += f"- Clinical Severity Alert: {severity.upper()}\n"
+        
+        if severity == "critical":
+            summary += "- RECOMMENDATION: Immediate contact with your physician or primary care specialist is advised."
+        elif severity == "medium":
+            summary += "- RECOMMENDATION: Monitor symptoms and review with doctor during next scheduled visit."
+        else:
+            summary += "- RECOMMENDATION: General maintenance. No critical issues detected."
     else:
-        summary += "- RECOMMENDATION: General maintenance. No critical issues detected."
+        # We got LLM summary, but we need to derive severity for the dictionary
+        severity = "low"
+        if "critical" in summary.lower() or "severe" in summary.lower() or "emergency" in summary.lower():
+            severity = "critical"
+        elif "medium" in summary.lower() or "abnormal" in summary.lower():
+            severity = "medium"
 
     return {
         "summary": summary,
