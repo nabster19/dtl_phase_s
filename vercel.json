@@ -7,7 +7,8 @@
     },
     "backend": {
       "root": "backend",
-      "routePrefix": "/backend"
+      "routePrefix": "/backend",
+      "framework": "flask"
     }
   }
 }
